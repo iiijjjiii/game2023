@@ -1,0 +1,301 @@
+import pygame
+import random
+import math
+from pygame import mixer
+
+pygame.init()
+mixer.init()
+
+mixer.music.load('bgmusic.wav')
+mixer.music.play(-1)
+
+table = []
+big_table = []
+
+
+class explosion_images(pygame.sprite.Sprite):
+    def __init__(self, pos_x, pos_y, size):
+        self.images = []
+        pygame.sprite.Sprite.__init__(self)
+        for num in range(1, 11):
+            img = pygame.image.load(f"Explosion{num}.png")
+            if size == 1:
+                img = pygame.transform.scale(img, (80, 80))
+            if size == 2:
+                img = pygame.transform.scale(img, (150, 150))
+            if size == 3:
+                img = pygame.transform.scale(img, (250, 250))
+            self.images.append(img)
+        self.index = 0
+        self.image = self.images[self.index]
+        self.rect = self.image.get_rect()
+        self.rect.center = [pos_x, pos_y]
+        self.counter = 0
+
+    def update(self):
+        explosion_speed = 3
+        self.counter += 1
+
+        if self.counter >= explosion_speed and self.index < len(self.images) - 1:
+            self.counter = 0
+            self.index += 1
+            self.image = self.images[self.index]
+
+        if self.index >= len(self.images) - 1 and self.counter >= explosion_speed:
+            self.kill()
+
+
+explosion_group = pygame.sprite.Group()
+
+
+font = pygame.font.Font('Karma Future.otf', 44)
+font_menu = pygame.font.Font('Karma Future.otf', 128)
+font_gameover = pygame.font.Font('Karma Future.otf', 158)
+font_table = pygame.font.Font('Karma Future.otf', 64)
+
+screen_runner = pygame.display.set_mode((1720, 820))
+game_icon = pygame.image.load('logo.png')
+pygame.display.set_icon(game_icon)
+pygame.display.set_caption('Reapers Attack')
+
+score_one = 0
+score_two = 0
+
+background = pygame.image.load('bg.png')
+
+normandy_sr1 = pygame.image.load('normandy.png')
+normandy_sr2 = pygame.image.load('normandy2.png')
+
+light_one = pygame.image.load('light.png')  # буллеты 1
+light_two = pygame.image.load('light2.png')  # буллеты 2
+
+asteroid_image = pygame.image.load('Asteroid.png')
+
+asteroid_x = random.randint(0,1600)
+asteroid_y = random.randint(0,10)
+
+hp_sprite = pygame.image.load('heart.png')
+
+light_one_x = 777
+light_one_y = 640
+
+light_two_x = 977
+light_two_y = 640
+
+sr1X = 760
+sr1Y = 650
+
+sr2X = 960
+sr2Y = 650
+
+changeX1 = 0
+changeX2 = 0
+
+light_one_flag = False
+light_two_flag = False
+
+reaper_img = []
+reaperX = []
+reaperY = []
+
+reaper_speed_x = []
+reaper_speed_y = []
+
+reaper_count = 10
+
+game_over = False
+
+high_score = 0
+
+flag = True
+two_players_mode = False
+
+hp = 3
+
+def create_reapers():
+    reaper_img.clear()
+    reaperX.clear()
+    reaperY.clear()
+    reaper_speed_x.clear()
+    reaper_speed_y.clear()
+    for i in range(reaper_count):
+        reaper_img.append(pygame.image.load('reaper.png'))
+        reaperX.append(random.randint(0, 1620))
+        reaperY.append(random.randint(0, 250))
+        reaper_speed_x.append(-0.5)
+        reaper_speed_y.append(40)
+
+
+create_reapers()
+
+def save_score():
+    with open("high_score.txt", "r") as rec:
+            for record in rec:
+                if len(record) > 0:
+                    record = record.split()
+                    table.append([record[0], int(record[1])])
+    if game_over is True:
+        if score_one or score_two > high_score:
+            score_m = 0
+            player_n = 'None'
+            if score_one > score_two:
+                score_m = score_one
+                player_n = 'PlayerOne'
+            if score_two > score_one:
+                score_m = score_two
+                player_n = 'PlayerTwo'
+            table.append([player_n, score_m])
+            table.sort(reverse=True, key=lambda t: t[1])
+            with open("high_score.txt", "w") as rec:
+                for i in table:
+                    rec.write(f'{i[0]} {i[1]}\n')
+
+
+def gameover_flag():
+    exp_sound = mixer.Sound('exp.wav')
+    exp_sound.play()
+    save_score()
+
+
+def score_one_func():
+    ms = font.render(f'Score:{score_one} ', True, 'white')
+    screen_runner.blit(ms, (10, 10))
+
+
+def score_two_func():
+    ts = font.render(f'Score:{score_two} ', True, 'white')
+    screen_runner.blit(ts, (10, 760))
+
+
+def players():
+    screen_runner.blit(normandy_sr1, (sr1X, sr1Y))
+    screen_runner.blit(normandy_sr2, (sr2X, sr2Y))
+
+
+while flag:
+    screen_runner.blit(background, (0, 0))
+    explosion_group.update()
+    explosion_group.draw(screen_runner)
+    if (not game_over):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                flag = False
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_a:
+                    changeX1 = -1
+                if event.key == pygame.K_h:
+                    changeX2 = -1
+                if event.key == pygame.K_d:
+                    changeX1 = +1
+                if event.key == pygame.K_k:
+                    changeX2 = +1
+                if event.key == pygame.K_z:
+                    game_over = True
+                    gameover_flag()
+                if event.key == pygame.K_q:
+                    if light_one_flag is False:
+                        light_sound = mixer.Sound('shoot.ogg')
+                        light_sound.play()
+                        light_one_flag = True
+                        light_one_x = sr1X
+                if event.key == pygame.K_p:
+                    if light_two_flag is False:
+                        light_sound = mixer.Sound('shoot.ogg')
+                        light_sound.play()
+                        light_two_flag = True
+                        light_two_x = sr2X
+            if event.type == pygame.KEYUP:
+                changeX1 = 0
+                changeX2 = 0
+        sr1X += changeX1
+        sr2X += changeX2
+        if sr1X <= 0:
+            sr1X = 0
+        if sr2X <= 0:
+            sr2X = 0
+        elif sr1X >= 1620:
+            sr1X = 1620
+        elif sr2X >= 1620:
+            sr2X = 1620
+        if light_one_y <= 0:
+            light_one_y = 650
+            light_one_flag = False
+        if light_two_y <= 0:
+            light_two_y = 650
+            light_two_flag = False
+        if light_one_flag is True:
+            screen_runner.blit(light_one, (light_one_x, light_one_y))
+            light_one_y -= 2
+        if light_two_flag is True:
+            screen_runner.blit(light_two, (light_two_x, light_two_y))
+            light_two_y -= 2
+        players()
+        for i in range(reaper_count):
+            if reaperY[i] > 400:
+                for j in range(reaper_count):
+                    reaperY[j] = 3000
+            reaperX[i] += reaper_speed_x[i]
+            if reaperX[i] <= 0:
+                reaper_speed_x[i] = 0.5
+                reaperY[i] += reaper_speed_y[i]
+            if reaperX[i] >= 1620:
+                reaper_speed_x[i] = -0.5
+                reaperY[i] += reaper_speed_y[i]
+
+            dist_lo_r = math.sqrt(math.pow(light_one_x - reaperX[i], 2) + math.pow(light_one_y - reaperY[i], 2))
+            dist_lt_r = math.sqrt(math.pow(light_two_x - reaperX[i], 2) + math.pow(light_two_y - reaperY[i], 2))
+
+            if dist_lo_r < 45:
+                explosion = explosion_images(reaperX[i],reaperY[i],2)
+                explosion_group.add(explosion)
+                exp_sound = mixer.Sound('exp.wav')
+                exp_sound.play()
+                light_one_y = 650
+                light_one_flag = False
+                reaperX[i] = random.randint(0, 1620)
+                reaperY[i] = random.randint(0, 250)
+                score_one += 10
+
+            if dist_lt_r < 45:
+                explosion = explosion_images(reaperX[i],reaperY[i],2)
+                explosion_group.add(explosion)
+                exp_sound = mixer.Sound('exp.wav')
+                exp_sound.play()
+                light_two_y = 650
+                light_two_flag = False
+                reaperX[i] = random.randint(0, 1620)
+                reaperY[i] = random.randint(0, 250)
+                score_two += 10
+
+            screen_runner.blit(reaper_img[i], (reaperX[i], reaperY[i]))
+        score_one_func()
+        score_two_func()
+    else:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                flag = False
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_r:
+                    game_over = False
+                    hp = 3
+                    score_one = 0
+                    score_two = 0
+                    create_reapers()
+
+        ls = font_gameover.render('GAME OVER', True, 'red')
+        screen_runner.blit(ls, (400, 80))
+        ls = font_table.render('Press R to Restart...', True, 'white')
+        screen_runner.blit(ls, (800, 720))
+
+        i = 0
+        for el in table:
+            if (i >= 8):
+                break
+            n = i + 1
+            ls = font_table.render('%d %s %d' % (n, el[0], el[1]), True, 'white')
+            screen_runner.blit(ls, (200, 270 + (64 * i)))
+            i += 1
+
+    pygame.display.update()
+
+quit()
